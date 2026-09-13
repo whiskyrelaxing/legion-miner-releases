@@ -43,8 +43,9 @@ Run `legion-miner --help` for the full option set.
 | `rx/sfx` | Safex |
 | `rx/wow` | Wownero |
 | `sha256d` | Veil's asic lane |
-| `progpow` | Veil's gpu lane, on the cpu |
-| `progpow-gpu` | Veil's gpu lane, on a gpu through Vulkan |
+| `progpow` | Veil's gpu lane: a gpu when there is a usable one, cpu if not |
+| `progpow-gpu` | the same lane, refusing to run without a gpu |
+| `progpow-cpu` | the same lane, on the cpu deliberately |
 
 Solo daemon mining supports Salvium and Veil. Veil runs three proof of work lanes
 in parallel, each with its own difficulty, and `--algo` picks which one to mine:
@@ -54,13 +55,31 @@ in parallel, each with its own difficulty, and `--algo` picks which one to mine:
 
 ## Gpu
 
-`--algo progpow-gpu` mines Veil's ProgPoW lane on a gpu through Vulkan, which is
-already present on a stock desktop, so nothing has to be installed. `--list-gpus`
-reports every device and whether it could actually mine.
+`--algo progpow` mines Veil's ProgPoW lane on a gpu through Vulkan, which is
+already present on a stock desktop, so nothing has to be installed. The cpu is a
+fallback and hundreds of times slower; `--algo progpow-gpu` refuses to start
+without a gpu rather than quietly crawling.
 
-That lane needs 4.71 GiB of ram for its dag and the same again on disk to cache
-it. The dag is built once per epoch, about every 5.7 days, and reloaded in
-seconds after that.
+`--list-gpus` reports every device and whether it could actually mine, which
+answers the real question rather than just listing hardware. `--gpu` picks one
+by that number, several as a comma separated list, or `all`:
+
+    legion-miner --coin veil --algo progpow --gpu all \
+      --daemon http://127.0.0.1:8332 --rpc-user <user> --rpc-pass <pass>
+
+Each gpu gets its own worker and its own slice of the nonce space, so two cards
+divide the work between them.
+
+The dag is 4.71 GiB and each gpu needs that much of its own memory. It is
+generated on the device from a small light cache, about a minute the first time
+a machine sees an epoch, then cached to disk and reloaded in seconds. An epoch
+lasts 8175 blocks, roughly 5.7 days.
+
+The shader is generated for the device it will run on, so a gpu whose buffers or
+subgroups are shaped unusually gets a shader that suits it. Before mining, one
+nonce is hashed on the gpu and on the cpu and the two have to agree: a gpu that
+disagrees drops to the portable path, or refuses to mine, rather than hashing at
+full speed and finding nothing.
 
 ## Upgrading
 
