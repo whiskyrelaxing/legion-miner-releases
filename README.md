@@ -70,6 +70,10 @@ by that number, several as a comma separated list, or `all`:
 Each gpu gets its own worker and its own slice of the nonce space, so two cards
 divide the work between them.
 
+Two discrete cards add up. An integrated gpu alongside a discrete one usually
+does not: its dag lives in system memory, and the bandwidth it pulls from there
+costs the discrete card about as much as the integrated one contributes.
+
 The dag is 4.71 GiB and each gpu needs that much of its own memory. It is
 generated on the device from a small light cache, about a minute the first time
 a machine sees an epoch, then cached to disk and reloaded in seconds. An epoch
