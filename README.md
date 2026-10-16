@@ -25,13 +25,14 @@ Verify a download:
 
 ## Usage
 
-    legion-miner -p pool.example.com:4444 -u <wallet> --clean
+    legion-miner --pool pool.example.com:4444 --user <wallet> --clean
 
 The Legion (self-organizing farm coordination) is on by default; `--standalone`
 mines solo. Miners only pair with others mining the same algorithm at the same
 pool or daemon, so farms for different coins stay separate on one network.
 
-Run `legion-miner --help` for the full option set.
+Every flag takes two dashes, there are no short forms. Run
+`legion-miner --help` for the full option set.
 
 ## Algorithms
 
