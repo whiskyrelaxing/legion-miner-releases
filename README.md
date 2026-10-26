@@ -3,7 +3,7 @@
 Prebuilt binaries for Legion Miner, a multi algorithm miner with self-organizing
 Legion farm coordination.
 
-Grab a build from the [Releases page](https://gitlab.com/whiskyrelaxing-group/legion-miner-releases/-/releases).
+Grab a build from the releases page on [GitLab](https://gitlab.com/whiskyrelaxing-group/legion-miner-releases/-/releases) or [GitHub](https://github.com/whiskyrelaxing/legion-miner-releases/releases); they carry the same files.
 Each release carries:
 
 | file | platform |
@@ -49,8 +49,9 @@ Every flag takes two dashes, there are no short forms. Run
 | `rx/sfx` | Safex |
 | `rx/wow` | Wownero |
 | `sha256d` | Veil's asic lane |
-| `progpow` | Veil's gpu lane, on the cpu |
-| `progpow-gpu` | Veil's gpu lane, on a gpu through Vulkan |
+| `progpow` | Veil's gpu lane: a gpu when there is a usable one, cpu if not |
+| `progpow-gpu` | the same lane, refusing to run without a gpu |
+| `progpow-cpu` | the same lane, on the cpu deliberately |
 
 ## Coins
 
@@ -122,13 +123,35 @@ mine through.
 
 ## Gpu
 
-`--algo progpow-gpu` mines Veil's ProgPoW lane on a gpu through Vulkan, which is
-already present on a stock desktop, so nothing has to be installed. `--list-gpus`
-reports every device and whether it could actually mine.
+`--algo progpow` mines Veil's ProgPoW lane on a gpu through Vulkan, which is
+already present on a stock desktop, so nothing has to be installed. The cpu is a
+fallback and hundreds of times slower; `--algo progpow-gpu` refuses to start
+without a gpu rather than quietly crawling.
 
-That lane needs 4.71 GiB of ram for its dag and the same again on disk to cache
-it. The dag is built once per epoch, about every 5.7 days, and reloaded in
-seconds after that.
+`--list-gpus` reports every device and whether it could actually mine, which
+answers the real question rather than just listing hardware. `--gpu` picks one
+by that number, several as a comma separated list, or `all`:
+
+    legion-miner --coin veil --algo progpow --gpu all \
+      --daemon http://127.0.0.1:58812 --rpc-user <user> --rpc-pass <pass>
+
+Each gpu gets its own worker and its own slice of the nonce space, so two cards
+divide the work between them.
+
+Two discrete cards add up. An integrated gpu alongside a discrete one usually
+does not: its dag lives in system memory, and the bandwidth it pulls from there
+costs the discrete card about as much as the integrated one contributes.
+
+The dag is 4.71 GiB and each gpu needs that much of its own memory. It is
+generated on the device from a small light cache, about a minute the first time
+a machine sees an epoch, then cached to disk and reloaded in seconds. An epoch
+lasts 8175 blocks, roughly 5.7 days.
+
+The shader is generated for the device it will run on, so a gpu whose buffers or
+subgroups are shaped unusually gets a shader that suits it. Before mining, one
+nonce is hashed on the gpu and on the cpu and the two have to agree: a gpu that
+disagrees drops to the portable path, or refuses to mine, rather than hashing at
+full speed and finding nothing.
 
 ## Upgrading
 
