@@ -27,9 +27,14 @@ Verify a download:
 
     legion-miner --pool pool.example.com:4444 --user <wallet> --clean
 
-The Legion (self-organizing farm coordination) is on by default; `--standalone`
-mines solo. Miners only pair with others mining the same algorithm at the same
-pool or daemon, so farms for different coins stay separate on one network.
+The Legion is on by default; `--standalone` mines alone. Boxes only pair with
+others mining the same algorithm at the same pool or node, so Legions for
+different coins stay separate on one network. Within a Legion, boxes form
+companies: a captain takes its node's work to the members that follow it over
+the same gossip and submits their blocks, credited to the finder. Ranks follow
+the work, a sergeant over its own sticks and cpu, a lieutenant over the network
+miners on its pool, a captain over a company, and the boxes settle them among
+themselves.
 
 Every flag takes two dashes, there are no short forms. Run
 `legion-miner --help` for the full option set.
@@ -47,11 +52,73 @@ Every flag takes two dashes, there are no short forms. Run
 | `progpow` | Veil's gpu lane, on the cpu |
 | `progpow-gpu` | Veil's gpu lane, on a gpu through Vulkan |
 
-Solo daemon mining supports Salvium and Veil. Veil runs three proof of work lanes
-in parallel, each with its own difficulty, and `--algo` picks which one to mine:
+## Coins
 
-    legion-miner --coin veil --algo sha256d --daemon http://127.0.0.1:8332 \
+`--coin` selects the chain for solo mining against a node; `--list-coins`
+prints this table from the binary.
+
+| chain | --coin | lanes | notes |
+|---|---|---|---|
+| Salvium | `salvium` | rx/0 | the default |
+| Monero | `monero` | rx/0 | also the Tari merge mining proxy, pointed at by `--daemon` |
+| Wownero | `wownero` | rx/wow | |
+| Safex | `safex` | rx/sfx | |
+| Veil | `veil` | rx/0, sha256d, progpow | one lane per run, named with `--algo`; the node needs `-miningaddress` |
+| Bitcoin | `bitcoin` | sha256d | needs `--payout-address` and an asic to matter |
+| Litecoin | `litecoin` | scrypt | needs `--payout-address` |
+| Dogecoin | `dogecoin` | scrypt | needs `--payout-address` |
+
+Veil runs three proof of work lanes in parallel, each with its own difficulty,
+and `--algo` picks which one to mine:
+
+    legion-miner --coin veil --algo sha256d --daemon http://127.0.0.1:58812 \
       --rpc-user <user> --rpc-pass <pass>
+
+A Bitcoin derived chain hands out the ingredients of a block rather than a
+header, so the miner builds the block and `--payout-address` names who it pays.
+The node itself checks the address, so a typo is a startup error. `--zmq` on
+the node's zmq feed brings a new block to the miners the moment the node has it.
+
+## Usb asics
+
+GekkoScience Compac F sticks mine Bitcoin and Veil's sha256d lane. `--asic auto`
+is the default: a box with sticks parks its cpu and splits the work by what
+each stick measurably does. The chip's reset line is root only, so a stick run
+starts under `sudo` and gives root back as soon as the sticks are open; no udev
+rules or group changes. `--list-sticks` shows what a machine has.
+
+## A pool for your network miners
+
+`--stratum-port PORT` makes a box the solo pool for the network miners on your
+lan, against your own node, sharing its Legion slice. It serves the stratum
+Bitaxes, Antminers, Goldshells, and LuckyMiners speak for Bitcoin, Litecoin,
+and Dogecoin; xmrig's protocol for Salvium, Monero, Wownero, Safex, and Veil's
+randomx lane; T-Rex's dialect for Veil's ProgPoW lane; and for Veil's sha256d
+lane the plain Bitcoin stratum, so an AxeOS unit, a Bitaxe, a Lucky Miner, or a
+NerdQaxe, mines Veil while the miner builds each Veil block itself, with the
+SHA256dv dialect of cpuminer-opt-veil on the port after. Every miner gets a
+coinbase of its own, version rolling where the chain allows it, and a share
+difficulty that tunes itself to each miner. Veil's blocks pay the node wallet's
+mining address, made there if it has none, or `--wallet`.
+
+Antminers cannot mine Veil this way, since cgminer refuses the empty extranonce
+Veil requires. Veil leaves only eleven version bits to roll where Bitcoin leaves
+sixteen, so an AxeOS unit on an older firmware runs a Veil job again before its
+firmware replaces it and about two thirds of its hashing repeats; the miner
+credits what is new and logs the rest.
+
+    legion-miner --coin veil --algo sha256d --daemon http://127.0.0.1:58812 \
+      --rpc-user <user> --rpc-pass <pass> --stratum-port 3330
+
+    legion-miner --coin monero --daemon http://127.0.0.1:18081 --wallet <address> \
+      --stratum-port 3333
+
+## Dashboard
+
+`--stats-html PATH` writes a self contained page a browser can open, readable
+on a phone: every box in the Legion, a tab for each company, each box's share
+of the search, trends, block finds, and the network miners under the box they
+mine through.
 
 ## Gpu
 
