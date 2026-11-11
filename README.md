@@ -34,10 +34,46 @@ companies: a captain takes its node's work to the members that follow it over
 the same gossip and submits their blocks, credited to the finder. Ranks follow
 the work, a sergeant over its own sticks and cpu, a lieutenant over the network
 miners on its pool, a captain over a company, and the boxes settle them among
-themselves.
+themselves. `--captain` makes a box lead whenever it is up, taking the company
+over from a captain that did not ask to lead, and `--no-captain` keeps a box
+out of the running, say one that hosts other work. Every block a box finds, or
+submits for a member, gets a banner in its log.
 
 Every flag takes two dashes, there are no short forms. Run
-`legion-miner --help` for the full option set.
+`legion-miner --help` for the full option set. `--clean` condenses the console
+to a stats line and events.
+
+The default thread count is computed for the machine AND the algorithm. RandomX
+wants each thread's 2 MB scratchpad resident, so it gets (total L2 + L3) / 2 MB
+clamped to the logical core count. sha256d's working set is an 80 byte header
+and a 32 byte midstate, so it gets every logical core: measured on a 7840U that
+is 16 threads rather than 12, worth 19%. `--threads` overrides either.
+
+`--list-ifaces` shows every network interface a Legion heartbeat could leave
+by, and why the others cannot:
+
+    INTERFACE          ADDRESS          BROADCAST        WHY
+    lo                 127.0.0.1        -                loopback
+    tailscale0         100.66.188.88    -                no broadcast address
+    wlp1s0             192.168.9.133    192.168.9.255    usable
+
+By default a heartbeat goes out of every usable one, which finds peers wherever
+they are, including across a bridge. A box with docker or vm interfaces can
+narrow that with `--legion-iface <name>`, repeated for more than one. A name
+that matches nothing is refused at startup rather than leaving the miner
+broadcasting to nowhere. `--legion-peer host:48711`, one per box, reaches
+boxes a broadcast cannot, across subnets or a vpn.
+
+Background mining (`--background`) drops every mining thread to the lowest
+scheduling priority, nice 19 on Linux and macOS, idle priority class on Windows,
+so the miner yields the moment anything else wants the cpu. That is the whole
+feature: the scheduler does this better than a polling loop can, so there is no
+idle detection, no cpu cap, and no auto pause.
+
+`--hash-feed` emits the `[hash]` visualizer feed, a few sampled hash prefixes a
+second for a front end that draws them. Off by default, and paced to a total
+rate rather than one per worker, so it reads the same on eight threads as on
+sixty four.
 
 ## Algorithms
 
@@ -52,6 +88,15 @@ Every flag takes two dashes, there are no short forms. Run
 | `progpow` | Veil's gpu lane: a gpu when there is a usable one, cpu if not |
 | `progpow-gpu` | the same lane, refusing to run without a gpu |
 | `progpow-cpu` | the same lane, on the cpu deliberately |
+
+Every algorithm is validated against real blocks from its own chain rather than
+against published vectors: the tests reconstruct a mined block's hashing input
+and reproduce the proof of work the network accepted. Nothing ships without that.
+
+RandomX comes from tevador/RandomX, vendored as a submodule pinned to v1.2.1.
+The three RandomX variants are separate builds of that source with their own
+parameters, isolated at link time so they can live in one binary. ProgPoW and
+ethash come from the vendored implementation Veil's node validates with.
 
 ## Coins
 
@@ -82,11 +127,12 @@ the node's zmq feed brings a new block to the miners the moment the node has it.
 
 ## Usb asics
 
-GekkoScience Compac F sticks mine Bitcoin and Veil's sha256d lane. `--asic auto`
-is the default: a box with sticks parks its cpu and splits the work by what
-each stick measurably does. The chip's reset line is root only, so a stick run
-starts under `sudo` and gives root back as soon as the sticks are open; no udev
-rules or group changes. `--list-sticks` shows what a machine has.
+GekkoScience Compac F and Compac A2 sticks mine Bitcoin and Veil's sha256d
+lane. `--asic auto` is the default: a box with sticks parks its cpu and splits
+the work by what each stick measurably does. The Compac F's reset line and the
+A2's usb interface are root only, so a stick run starts under `sudo` and gives
+root back as soon as the sticks are open; no udev rules or group changes.
+`--list-sticks` shows what a machine has.
 
 ## A pool for your network miners
 
@@ -117,9 +163,27 @@ credits what is new and logs the rest.
 ## Dashboard
 
 `--stats-html PATH` writes a self contained page a browser can open, readable
-on a phone: every box in the Legion, a tab for each company, each box's share
-of the search, trends, block finds, and the network miners under the box they
-mine through.
+on a phone, that refreshes in place; any static web server serves it. It is a
+menu of views: Dashboard with the Legion's cards and the map of the search,
+Miners with each box's rate, trend, share of the space, and blocks, and the
+network miners under the box they mine through, Hosts with each box's
+temperature, clock, power, hashes per joule, memory, and uptime, Scoreboard
+with the block finds and the Legion's ten best shares, each against the
+network's bar when it was found, and History with the Legion's rate over the
+last day and week. One company is the page itself; a bar of companies across
+the top appears only when there are several. Block finds link to the coin's
+explorer where one is known, and `--explorer-url` takes a template with
+`{height}` for a chain that is not listed.
+
+Each miner keeps its own block and share totals in a
+`<binary>-stats-<cluster>.dat` beside the binary, with the trends, the week,
+and the scoreboard beside it, so a restart or an upgrade loses none of them.
+Every miner advertises only its OWN totals over gossip, so peers restore each
+other but nobody can vouch for a box's own history.
+
+A Windows box reports its memory and clock on the Hosts view, a Mac its memory.
+Their temperature and power, and a Mac's clock, sit behind a kernel driver or a
+root only tool those systems do not ship, so the page leaves them blank.
 
 ## Gpu
 
