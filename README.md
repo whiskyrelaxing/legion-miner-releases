@@ -125,6 +125,13 @@ header, so the miner builds the block and `--payout-address` names who it pays.
 The node itself checks the address, so a typo is a startup error. `--zmq` on
 the node's zmq feed brings a new block to the miners the moment the node has it.
 
+A pool says "accepted" for a share and for a block alike, so a pool miner on its
+own cannot tell which it just sent. Given `--zmq` on your own node's feed it
+can: the node publishes the bar the next block has to beat, and a share past
+that bar is a block, with its banner in the log, its count on the page, and its
+place on the Scoreboard against the network. Without a node, pool mode counts
+shares and the best share seen, as before.
+
 ## Usb asics
 
 GekkoScience Compac F and Compac A2 sticks mine Bitcoin and Veil's sha256d
