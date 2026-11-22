@@ -39,6 +39,14 @@ over from a captain that did not ask to lead, and `--no-captain` keeps a box
 out of the running, say one that hosts other work. Every block a box finds, or
 submits for a member, gets a banner in its log.
 
+A node that stops answering does not strand the Legion. A captain keeps the
+lead through thirty seconds of silence, so a node restarted costs the company
+nothing, then hands it to a box whose node answers. A box left without a node
+says so on its status line with how long it has been, shows as `no node` on
+the page, and is counted on the Legion line. After a minute with no work it
+stops mining what it holds, and starts again when its node, or a captain, has
+work for it.
+
 Every flag takes two dashes, there are no short forms. Run
 `legion-miner --help` for the full option set. `--clean` condenses the console
 to a stats line and events.
