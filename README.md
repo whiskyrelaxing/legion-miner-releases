@@ -133,6 +133,20 @@ header, so the miner builds the block and `--payout-address` names who it pays.
 The node itself checks the address, so a typo is a startup error. `--zmq` on
 the node's zmq feed brings a new block to the miners the moment the node has it.
 
+Litecoin can carry Dogecoin with it. `--merge dogecoin` tries every scrypt hash
+against both chains: the Litecoin coinbase claims the Dogecoin block, each
+chain's own bar decides whether a share is its block, and each block goes to
+its own node. The merged chain's node is named with `--merge-daemon`,
+`--merge-rpc-user`, and `--merge-rpc-pass`, and its blocks pay
+`--merge-payout-address`. Left without a payout address, either node's wallet
+supplies one. With `--stratum-port` the box is the merge mining pool for a
+scrypt asic, a Goldshell say, which never knows a second chain rides along:
+
+    legion-miner --coin litecoin --daemon http://127.0.0.1:9332 \
+      --rpc-user <user> --rpc-pass <pass> \
+      --merge dogecoin --merge-daemon http://127.0.0.1:22555 \
+      --merge-rpc-user <user> --merge-rpc-pass <pass> --stratum-port 3335
+
 A pool says "accepted" for a share and for a block alike, so a pool miner on its
 own cannot tell which it just sent. Given `--zmq` on your own node's feed it
 can: the node publishes the bar the next block has to beat, and a share past
