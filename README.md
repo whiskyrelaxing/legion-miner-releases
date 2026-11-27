@@ -89,7 +89,7 @@ sixty four.
 
 | algo | used by |
 |---|---|
-| `rx/0` | Salvium, Monero, and other stock RandomX chains |
+| `rx/0` | Monero, Tari, Salvium, and other stock RandomX chains |
 | `rx/sfx` | Safex |
 | `rx/wow` | Wownero |
 | `sha256d` | Bitcoin, and Veil's asic lane |
@@ -126,6 +126,7 @@ prints this table from the binary.
 | Litecoin | `litecoin` | scrypt | needs `--payout-address` |
 | Dogecoin | `dogecoin` | scrypt | needs `--payout-address` |
 | Xelis | `xelis` | xel/v3 | the node's work feed; `--wallet` is the `xel:` address paid |
+| Tari | `tari` | rx/0 | its own RandomX lane, from the node's mining endpoint; the node pays its own address |
 
 Veil runs three proof of work lanes in parallel, each with its own difficulty,
 and `--algo` picks which one to mine:
@@ -160,6 +161,15 @@ every five seconds, which is how a node between blocks is told from one that
 has gone quiet:
 
     legion-miner --coin xelis --daemon http://127.0.0.1:8080 --wallet xel:<address>
+
+Tari has a RandomX lane of its own beside the one it merges with Monero, and
+its base node serves that lane to miners itself. Switch it on under
+`[base_node]` in the node's config with `xmrig_proxy_enabled = true`, an
+`xmrig_proxy_address` the miners can reach, and the
+`xmrig_proxy_wallet_payment_address` its blocks pay. The node cuts each block
+and pays that address, so the miner names no wallet:
+
+    legion-miner --coin tari --daemon http://127.0.0.1:18085
 
 A pool says "accepted" for a share and for a block alike, so a pool miner on its
 own cannot tell which it just sent. Given `--zmq` on your own node's feed it
