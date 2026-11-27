@@ -92,7 +92,9 @@ sixty four.
 | `rx/0` | Salvium, Monero, and other stock RandomX chains |
 | `rx/sfx` | Safex |
 | `rx/wow` | Wownero |
-| `sha256d` | Veil's asic lane |
+| `sha256d` | Bitcoin, and Veil's asic lane |
+| `scrypt` | Litecoin and Dogecoin |
+| `xel/v3` | Xelis; `--algo xelis` names it too |
 | `progpow` | Veil's gpu lane: a gpu when there is a usable one, cpu if not |
 | `progpow-gpu` | the same lane, refusing to run without a gpu |
 | `progpow-cpu` | the same lane, on the cpu deliberately |
@@ -104,7 +106,9 @@ and reproduce the proof of work the network accepted. Nothing ships without that
 RandomX comes from tevador/RandomX, vendored as a submodule pinned to v1.2.1.
 The three RandomX variants are separate builds of that source with their own
 parameters, isolated at link time so they can live in one binary. ProgPoW and
-ethash come from the vendored implementation Veil's node validates with.
+ethash come from the vendored implementation Veil's node validates with, and
+XelisHash from the library Xelis's node validates with, at the revision its
+release pins.
 
 ## Coins
 
@@ -121,6 +125,7 @@ prints this table from the binary.
 | Bitcoin | `bitcoin` | sha256d | needs `--payout-address` and an asic to matter |
 | Litecoin | `litecoin` | scrypt | needs `--payout-address` |
 | Dogecoin | `dogecoin` | scrypt | needs `--payout-address` |
+| Xelis | `xelis` | xel/v3 | the node's work feed; `--wallet` is the `xel:` address paid |
 
 Veil runs three proof of work lanes in parallel, each with its own difficulty,
 and `--algo` picks which one to mine:
@@ -146,6 +151,15 @@ scrypt asic, a Goldshell say, which never knows a second chain rides along:
       --rpc-user <user> --rpc-pass <pass> \
       --merge dogecoin --merge-daemon http://127.0.0.1:22555 \
       --merge-rpc-user <user> --merge-rpc-pass <pass> --stratum-port 3335
+
+Xelis hands out work itself, over a websocket on its node's rpc port, with no
+pool in between. `--daemon` names the node and `--wallet` the `xel:` address a
+block pays, which is checked before the node is asked. Each box holds its own
+feed and the Legion splits the search between them. The node pings its miners
+every five seconds, which is how a node between blocks is told from one that
+has gone quiet:
+
+    legion-miner --coin xelis --daemon http://127.0.0.1:8080 --wallet xel:<address>
 
 A pool says "accepted" for a share and for a block alike, so a pool miner on its
 own cannot tell which it just sent. Given `--zmq` on your own node's feed it
